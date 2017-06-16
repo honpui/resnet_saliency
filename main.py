@@ -12,6 +12,7 @@ from torch.autograd import Variable
 import numpy as np
 import cv2
 import argparse
+import os
 
 parser = argparse.ArgumentParser(description='Saliency Prediction With ResNet-50')
 parser.add_argument('--mode', type=str, default='train', help='Selecting running mode (default: train)')
@@ -143,6 +144,7 @@ def eval_():
 
         if args.save_result:
             pred = output.data.cpu().numpy()
+            pred = pred.reshape((img_rows/32,img_cols/32))
             gt = target.data.cpu().numpy()
             gt = gt.reshape((img_rows/32,img_cols/32))
 
@@ -151,6 +153,7 @@ def eval_():
             gt = (gt - np.min(gt))/(np.max(gt)-np.min(gt))
             pred*=255
             gt*=255
+
 
             cv2.imwrite(os.path.join(args.res_dir,str(batch_idx)+'_pred.png'),pred)
             cv2.imwrite(os.path.join(args.res_dir,str(batch_idx)+'_gt.png'),gt)
