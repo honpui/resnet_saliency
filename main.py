@@ -10,7 +10,15 @@ from pre_processing import Batch_generator
 from model import resnet50
 from torch.autograd import Variable
 import numpy as np
+import cv2
+import argparse
 
+parser = argparse.ArgumentParser(description='Saliency Prediction With ResNet-50')
+parser.add_argument('--mode', type=str, default='train', help='Selecting running mode (default: train)')
+parser.add_argument('--weights', type=str, default=None, help='Specififying the directory for the weights to be loaded (default: None)')
+parser.add_argument('--save_result', type=bool, default=True, help='Enable to save predicted map and ground truth (default: True)')
+parser.add_argument('--res_dir', type=str, default='./res', help='Directory to save results (default: ./res)')
+args = parser.parse_args()
 
 def logsoftmax_cross_entropy(input_,target):
     "original cross entropy loss only works with one-hot vetcor, write an own one"
@@ -39,7 +47,7 @@ def adjust_learning_rate(optimizer, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def main():
+def train():
     #parameters
     nb_epoch = 100
     img_rows,img_cols = 448, 448
@@ -107,5 +115,51 @@ def main():
         checkpoint = './checkpoints_v3/mode_epoch_' + str(epoch) +'.pth'
         torch.save(model.state_dict(),checkpoint)
 
-if __name__ == '__main__':
-    main()
+def eval_():
+    img_rows,img_cols = 448, 448
+    batch_size = 1
+    #loading data and model
+    val_DataLoader = Batch_generator(img_rows,img_cols,mode='val',batch_size=batch_size)
+    model = resnet50()
+    model.load_state_dict(torch.load(args.weights)) #loading pretrained weights
+    model.cuda()
+
+    if args.save_result == True:
+        if not os.path.exists(args.res_dir):
+            os.mkdir(args.res_dir)
+
+    #main loop for computing result
+    model.eval()
+    total_loss = []
+    print 'Start evaluation'
+    for batch_idx in xrange(val_DataLoader.iter_num):
+        data, target = val_DataLoader.get_batch(batch_idx)
+        data, target = torch.from_numpy(data),torch.from_numpy(target)
+        data, target = Variable(data,volatile=True), Variable(target,volatile=True)
+        data, target = data.cuda(), target.cuda()
+        output = model(data)
+        loss = logsoftmax_cross_entropy(output,target)
+        total_loss.append(loss.data[0])
+
+        if args.save_result:
+            pred = output.data.cpu().numpy()
+            gt = target.data.cpu().numpy()
+            gt = gt.reshape((img_rows/32,img_cols/32))
+
+            #normalize the maps
+            pred = (pred - np.min(pred))/(np.max(pred)-np.min(pred))
+            gt = (gt - np.min(gt))/(np.max(gt)-np.min(gt))
+            pred*=255
+            gt*=255
+
+            cv2.imwrite(os.path.join(args.res_dir,str(batch_idx)+'_pred.png'),pred)
+            cv2.imwrite(os.path.join(args.res_dir,str(batch_idx)+'_gt.png'),gt)
+
+    total_loss = np.mean(total_loss)
+    print 'Testing loss is %f' %total_loss
+
+
+if args.mode =='train':
+    train()
+else:
+    eval_()
