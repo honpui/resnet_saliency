@@ -42,16 +42,12 @@ class Batch_generator:
             sal_map = salicon.showAnns(anns)
             sal_map = cv2.resize(sal_map, (img_cols/32, img_rows/32),interpolation = cv2.INTER_LINEAR) #resize the saliency map
             anno.append(sal_map)
-        data = np.array(data, dtype=np.float32)
+        data = np.array(data, dtype=np.int8)
         data = data.transpose((0, 3, 1, 2))
         anno = np.array(anno, dtype=np.float32)
         anno = anno.reshape(anno.shape[0],(img_rows/32)*(img_cols/32)) #converting spatial saliency map into vectors
 
-        #preprocessing data
-        #normalize the img
-        for i in xrange(3):
-            data[:,i,:,:] -= np.mean(data[:,i,:,:])
-            data[:,i,:,:] /= np.std(data[:,i,:,:])
+
         #normalize the saliency map for training with cross entropy
         for i in xrange(len(anno)):
             # cur_map = (cur_map-np.min(cur_map))/(np.max(cur_map)-np.min(cur_map)) #data v2
@@ -75,6 +71,8 @@ class Batch_generator:
         if len(current_anno.shape)<2:
             current_anno = current_anno.reshape(1,current_anno.shape[0])
 
+        current_data = self.prepared_img(current_data)
+
         return current_data, current_anno
 
     #randomly shuffle data for training at the end of each epoch
@@ -83,3 +81,11 @@ class Batch_generator:
         np.random.shuffle(random)
         self.data = self.data[random]
         self.anno = self.anno[random]
+
+    def prepared_img(self,img):
+        mean = np.load('mean.npy')
+        std = np.load('std.npy')
+        processed_img = img.astype('float32')
+        for i in xrange(3):
+            processed_img[:,i,:,:]= (processed_img[:,i,:,:]-mean[i])/std[i]
+        return processed_img

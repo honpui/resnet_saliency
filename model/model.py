@@ -10,17 +10,6 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
-#subtract activation with maximum value to avoid overflow
-class subtract_max(nn.Module):
-
-    def __init__(self,):
-        super(subtract_max, self).__init__()
-
-    def forward(self, x):
-        max_act = torch.max(x,dim=1)[0]
-        x_processed = x-max_act.expand_as(x)
-        return x_processed
-
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -108,7 +97,6 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.sal_layer = nn.Conv2d(2048,1, kernel_size=1,bias=False) #adding additional saliency layer
-        self.sub_max = subtract_max()
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):

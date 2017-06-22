@@ -38,20 +38,20 @@ def log(file_name,msg):
 def adjust_learning_rate(optimizer, epoch):
     "adatively adjust lr based on epoch"
     if epoch < 10:
-        lr = 2.5e-4
+        lr = 2.5e-3
     elif epoch <= 20:
-        lr = 2.5e-4 * (10 ** (float(epoch-10) / 10))
+        lr = 2.5e-3 * (10 ** (float(epoch-10) / 10))
     elif epoch<=40:
-        lr = 2.5e-3 * (0.1 ** (float(epoch-20) / 20))
+        lr = 2.5e-2 * (0.1 ** (float(epoch-20) / 20))
     else:
-        lr = 2.5e-4
+        lr = 2.5e-3
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
 def train():
     #parameters
     nb_epoch = 100
-    img_rows,img_cols = 448, 448
+    img_rows,img_cols = 800, 608
     batch_size = 1
     #initialize data loader
     train_DataLoader = Batch_generator(img_rows,img_cols,mode='train',batch_size=batch_size)
@@ -62,7 +62,7 @@ def train():
     model.load_state_dict(torch.load('resnet_pretrained.pth')) #loading pretrained weights
     model.cuda()
     # criterion = nn.CrossEntropyLoss().cuda()
-    optimizer = optim.SGD(model.parameters(), lr=2.5e-3, weight_decay=5e-4,momentum=0.9,nesterov=True) #0.001
+    optimizer = optim.SGD(model.parameters(), lr=2.5e-4, weight_decay=5e-4,momentum=0.9,nesterov=True) #0.001
 
     #private function for training and evaluation
     def train(epoch):
@@ -86,7 +86,7 @@ def train():
                     epoch, i * len(data), train_DataLoader.data_size,
                     100. * i * len(data)/ train_DataLoader.data_size, loss.data[0])
                 print msg
-                log('training_loss_v3.log',msg)
+                log('training_loss_v4.log',msg)
 
     def test(epoch):
         model.eval()
@@ -103,7 +103,7 @@ def train():
         total_loss = np.mean(total_loss)
         msg = 'Validation loss for Epoch %d is %f' %(epoch,total_loss)
         print msg
-        log('validation_loss_v3.log',msg)
+        log('validation_loss_v4.log',msg)
 
 
     #main loop for training:
@@ -113,11 +113,11 @@ def train():
         train(epoch)
         test(epoch)
         #save check point
-        checkpoint = './checkpoints_v3/mode_epoch_' + str(epoch) +'.pth'
+        checkpoint = './checkpoints_v4/model_epoch_' + str(epoch) +'.pth'
         torch.save(model.state_dict(),checkpoint)
 
 def eval_():
-    img_rows,img_cols = 448, 448
+    img_rows,img_cols = 800, 608
     batch_size = 1
     #loading data and model
     val_DataLoader = Batch_generator(img_rows,img_cols,mode='val',batch_size=batch_size)
