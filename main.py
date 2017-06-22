@@ -30,6 +30,13 @@ def logsoftmax_cross_entropy(input_,target):
     loss = torch.mean(loss)
     return loss
 
+def get_map(input_):
+    input_ = input_.view(input_.size(0), -1)
+    input_ = input_.cpu().numpy()
+    softmax = np.exp(input_-np.max(input_))/np.sum(np.exp(input_-np.max(input_)))
+
+    return softmax
+
 def log(file_name,msg):
     log_file = open(file_name,"a")
     log_file.write(msg+'\n')
@@ -51,7 +58,7 @@ def adjust_learning_rate(optimizer, epoch):
 def train():
     #parameters
     nb_epoch = 100
-    img_rows,img_cols = 800, 608
+    img_rows,img_cols = 448, 448
     batch_size = 1
     #initialize data loader
     train_DataLoader = Batch_generator(img_rows,img_cols,mode='train',batch_size=batch_size)
@@ -117,7 +124,7 @@ def train():
         torch.save(model.state_dict(),checkpoint)
 
 def eval_():
-    img_rows,img_cols = 800, 608
+    img_rows,img_cols = 448, 448
     batch_size = 1
     #loading data and model
     val_DataLoader = Batch_generator(img_rows,img_cols,mode='val',batch_size=batch_size)
@@ -143,7 +150,8 @@ def eval_():
         total_loss.append(loss.data[0])
 
         if args.save_result:
-            pred = output.data.cpu().numpy()
+            pred = output.data
+            pred = get_map(pred)
             pred = pred.reshape((img_rows/32,img_cols/32))
             gt = target.data.cpu().numpy()
             gt = gt.reshape((img_rows/32,img_cols/32))
